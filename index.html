@@ -18,12 +18,11 @@
       font-family: "Georgia", "Times New Roman", serif;
       color: var(--ink);
       background: radial-gradient(circle at 30% 20%, var(--bg1), var(--bg2));
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
       display: flex;
-      align-items: center;
-      justify-content: center;
     }
-    .quest { display: none; text-align: center; padding: 24px; width: 100%; max-width: 520px; }
+    .quest { display: none; text-align: center; padding: 24px; width: 100%; max-width: 520px; margin: auto; }
     .quest.active { display: block; }
     .emoji { font-size: 72px; animation: bob 2.4s ease-in-out infinite; }
     @keyframes bob { 50% { transform: translateY(-8px); } }
@@ -55,6 +54,20 @@
     #yes:hover { background: var(--accent-dark); transform: scale(1.05); }
     #no { background: #8a7580; }
     #no.runaway { position: fixed; transition: left .25s ease-out, top .25s ease-out; z-index: 10; }
+    h2 { font-size: 20px; margin: 26px 0 10px; text-align: left; }
+    .opts { display: flex; gap: 10px; flex-wrap: wrap; }
+    .opts label {
+      flex: 1 1 200px; display: flex; align-items: center; gap: 10px; text-align: left;
+      background: rgba(255,255,255,.65); border: 2px solid transparent; border-radius: 16px;
+      padding: 12px 14px; cursor: pointer; font-size: 18px; transition: border-color .15s, background .15s;
+    }
+    .opts label:has(input:checked) { border-color: var(--accent); background: #fff; }
+    .opts label.locked { cursor: not-allowed; opacity: .9; }
+    .opts.col label { flex: 1 1 100%; }
+    input[type=radio], input[type=checkbox] { accent-color: var(--accent); width: 20px; height: 20px; flex: none; }
+    #submit2 { margin-top: 28px; background: var(--accent); }
+    #submit2:disabled { background: #c9aab5; cursor: not-allowed; box-shadow: none; }
+    #summary { text-align: left; font-size: 18px; line-height: 1.6; background: rgba(255,255,255,.65); border-radius: 16px; padding: 12px 18px; }
     .done p { font-size: 20px; }
     .heart { position: fixed; top: -40px; font-size: 28px; pointer-events: none; animation: fall linear forwards; }
     @keyframes fall { to { transform: translateY(110vh) rotate(360deg); } }
@@ -72,9 +85,39 @@
     </div>
   </section>
 
-  <section class="quest done" id="quest1-done">
+  <!-- Квест 2 -->
+  <section class="quest" id="quest2">
     <div class="emoji">🥰</div>
-    <h1>Ура! Я знав, що ти скажеш так!</h1>
+    <h1>Ура! Тепер кілька питань</h1>
+    <form id="form2">
+      <h2>1. Ти сьогодні пасенджер-прінцес чи драйвер?</h2>
+      <div class="opts">
+        <label><input type="radio" name="role" value="Пасенджер-прінцес 👑"> Пасенджер-прінцес 👑</label>
+        <label><input type="radio" name="role" value="Драйвер 🚗"> Драйвер 🚗</label>
+      </div>
+
+      <h2>2. Що робитимемо?</h2>
+      <div class="opts col">
+        <label><input type="radio" name="plan" value="Попкорн + фільм"> 🍿 Попкорн + фільм</label>
+        <label><input type="radio" name="plan" value="Прогулянка та вечеря"> 🌆 Прогулянка та вечеря</label>
+      </div>
+
+      <h2>3. Додатково</h2>
+      <div class="opts col">
+        <label><input type="checkbox" name="extra" value="Купити щось солодке"> 🍫 Купити щось солодке</label>
+        <label><input type="checkbox" name="extra" value="Не спізнитись"> ⏰ Не спізнитись</label>
+        <label><input type="checkbox" name="extra" value="Під час зустрічі сильно зацілувати"> 😘 Під час зустрічі сильно зацілувати</label>
+        <label class="locked"><input type="checkbox" name="extra" value="Пальчик в анальчик" checked disabled> 👉 Пальчик в анальчик</label>
+      </div>
+
+      <button type="submit" id="submit2" disabled>Готово 💖</button>
+    </form>
+  </section>
+
+  <section class="quest done" id="quest2-done">
+    <div class="emoji">💞</div>
+    <h1>Записав!</h1>
+    <div id="summary"></div>
     <p>Скоро буде ще щось цікаве...</p>
   </section>
 
@@ -84,12 +127,15 @@
       var no = document.getElementById('no');
       var hint = document.getElementById('hint');
       var yesClicks = 0;
+      var noTried = false;
       var RADIUS = 160;      // "недалеко" від поточного місця
       var MIN_JUMP = 90;     // щоб не стрибала на місці
 
       function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
       function dodge() {
+        noTried = true;
+        hint.classList.remove('show');   // після спроби натиснути «Ні» підказка зникає
         var w = no.offsetWidth, h = no.offsetHeight;
         var r = no.getBoundingClientRect();
         // перший раз — стаємо fixed на тому ж місці, без стрибка
@@ -118,12 +164,39 @@
 
       yes.addEventListener('click', function () {
         yesClicks++;
-        if (yesClicks === 1) {
-          hint.classList.add('show');   // перше «Так» — питання над кнопкою
+        // перше «Так» — питання над кнопкою; далі проходимо лише якщо вона хоч раз тицьнула «Ні»
+        if (yesClicks === 1 || !noTried) {
+          hint.classList.add('show');
           return;
         }
-        document.getElementById('quest1').classList.remove('active');
-        document.getElementById('quest1-done').classList.add('active');
+        show('quest2');
+      });
+
+      function show(id) {
+        document.querySelectorAll('.quest').forEach(function (q) { q.classList.remove('active'); });
+        document.getElementById(id).classList.add('active');
+        window.scrollTo(0, 0);
+      }
+
+      // Квест 2
+      var form = document.getElementById('form2');
+      var submit2 = document.getElementById('submit2');
+      form.addEventListener('change', function () {
+        submit2.disabled = !(form.elements.role.value && form.elements.plan.value);
+      });
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var extras = ['Пальчик в анальчик'];
+        form.querySelectorAll('input[name=extra]:checked:not(:disabled)').forEach(function (c) { extras.unshift(c.value); });
+        var s = document.getElementById('summary');
+        s.innerHTML = '';
+        [['Сьогодні', form.elements.role.value], ['Робимо', form.elements.plan.value], ['Додатково', extras.join(', ')]].forEach(function (r) {
+          var p = document.createElement('div');
+          var b = document.createElement('b'); b.textContent = r[0] + ': ';
+          p.appendChild(b); p.appendChild(document.createTextNode(r[1]));
+          s.appendChild(p);
+        });
+        show('quest2-done');
         hearts();
       });
 
