@@ -87,6 +87,10 @@
     #cd { display: block; font-size: 34px; color: var(--accent-dark); font-variant-numeric: tabular-nums; margin-top: 4px; }
     .status { font-size: 15px; opacity: .8; min-height: 22px; margin: 12px 0 0; }
     .status button { font-size: 15px; padding: 6px 16px; margin-left: 8px; background: var(--accent); }
+    #song { margin-top: 18px; }
+    .player { position: relative; margin-top: 18px; padding-top: 56.25%; border-radius: 16px; overflow: hidden; display: none; box-shadow: 0 6px 16px rgba(0,0,0,.2); }
+    .player.on { display: block; }
+    .player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
     #music { position: fixed; top: 14px; right: 14px; z-index: 20; padding: 8px 12px; font-size: 20px; background: rgba(255,255,255,.8); color: var(--ink); display: none; }
     #music.on { display: block; }
     .heart { position: fixed; top: -40px; font-size: 28px; pointer-events: none; animation: fall linear forwards; }
@@ -158,6 +162,8 @@
     <h1>Домовились!</h1>
     <div id="summary"></div>
     <p class="countdown">До побачення лишилось:<span id="cd"></span></p>
+    <button type="button" id="song" class="next">▶ Наша пісня 🎶</button>
+    <div class="player" id="player"></div>
   </section>
 
   <button id="music" type="button" aria-label="Музика">🔇</button>
@@ -168,6 +174,9 @@
       // Куди приходять відповіді: ntfy.sh (безкоштовно, без акаунту).
       // Підписатись: застосунок ntfy або https://ntfy.sh/<TOPIC>
       var NTFY_TOPIC = 'di-7B2SFf9kBePLpRzIOmA';
+      // Пісня «лтл» (YouTube, вбудований плеєр) і секунда, з якої стартує приспів
+      var SONG_ID = 'czucm2XMtRI';
+      var SONG_START = 45;
       var STORE_KEY = 'date-invite-v1';
       var STEPS = ['q2-role', 'q2-plan', 'q2-extra', 'q2-time'];
 
@@ -401,6 +410,17 @@
         musicOn = false; clearInterval(musicTimer); $('music').textContent = '🔇';
       }
       $('music').addEventListener('click', function () { musicOn ? musicOffFn() : musicOnFn(); });
+
+      // ---------- пісня ----------
+      $('song').addEventListener('click', function () {
+        musicOffFn();                         // власну мелодію вимикаємо
+        var p = $('player');
+        p.innerHTML = '<iframe src="https://www.youtube.com/embed/' + SONG_ID +
+          '?autoplay=1&start=' + SONG_START + '&playsinline=1&rel=0" allow="autoplay; encrypted-media" allowfullscreen title="Наша пісня"></iframe>';
+        p.classList.add('on');
+        $('song').style.display = 'none';
+        $('music').classList.remove('on');
+      });
 
       // ---------- фінал ----------
       function showDone(fresh) {
