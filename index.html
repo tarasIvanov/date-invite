@@ -152,7 +152,6 @@
     <h1>Записав!</h1>
     <div id="summary"></div>
     <p class="countdown">До побачення лишилось:<span id="cd"></span></p>
-    <p class="status" id="send-status" aria-live="polite"></p>
   </section>
 
   <button id="music" type="button" aria-label="Музика">🔇</button>
@@ -336,9 +335,9 @@
       }
 
       // ---------- відправка відповіді (ntfy.sh) ----------
-      function setStatus(html) { $('send-status').innerHTML = html; }
-      function send() {
-        setStatus('Надсилаю відповідь...');
+      // Нічого не показуємо на її екрані; якщо не вийшло — тихо пробуємо ще
+      function send(attempt) {
+        attempt = attempt || 1;
         var text = summaryRows().map(function (r) { return r[0] + ': ' + r[1]; }).join('\n');
         fetch('https://ntfy.sh/', {
           method: 'POST',
@@ -346,10 +345,8 @@
         }).then(function (r) {
           if (!r.ok) throw new Error(r.status);
           state.sent = true; save();
-          setStatus('Відповідь надіслано ✅');
         }).catch(function () {
-          setStatus('Не вдалося надіслати <button type="button" id="retry">Ще раз</button>');
-          $('retry').addEventListener('click', send);
+          if (attempt < 5) setTimeout(function () { send(attempt + 1); }, 5000 * attempt);
         });
       }
 
@@ -386,7 +383,7 @@
         show('quest2-done');
         $('music').classList.add('on');
         if (fresh) { hearts(); musicOnFn(); }
-        if (!state.sent) send(); else setStatus('Відповідь надіслано ✅');
+        if (!state.sent) send();
       }
       finish.addEventListener('click', function () { showDone(true); });
 
