@@ -84,6 +84,8 @@
     .chips button { padding: 11px 0; font-size: 19px; background: rgba(255,255,255,.7); color: var(--ink); box-shadow: none; border: 2px solid transparent; border-radius: 14px; font-variant-numeric: tabular-nums; }
     .chips button.sel { background: var(--accent); color: #fff; border-color: var(--accent-dark); transform: scale(1.04); }
     .next { margin-top: 28px; background: var(--accent); }
+    .back { display: block; margin: 14px auto 0; background: none; box-shadow: none; color: var(--ink); opacity: .75; font-size: 17px; padding: 8px 18px; text-decoration: underline; }
+    .back:hover { opacity: 1; }
     .next:disabled { background: #c9aab5; cursor: not-allowed; box-shadow: none; }
 
     #summary { text-align: left; font-size: 18px; line-height: 1.6; background: rgba(255,255,255,.65); border-radius: 16px; padding: 12px 18px; }
@@ -131,6 +133,7 @@
       <label><input type="radio" name="plan" value="Прогулянка та вечеря"> 🌆 Прогулянка та вечеря</label>
     </div>
     <button class="next" data-next="q2-extra" data-need="plan" disabled>Далі</button>
+    <button class="back" data-back="q2-role">← Назад</button>
   </section>
 
   <section class="quest" id="q2-extra">
@@ -144,6 +147,7 @@
       <label class="locked" id="locked-opt"><input type="checkbox" name="extra" value="Пальчик в анальчик" checked disabled> 👉 Пальчик в анальчик<span class="tip" id="tip" role="status">Ця опція недоступна до редагування 🔒</span></label>
     </div>
     <button class="next" data-next="q2-time">Далі</button>
+    <button class="back" data-back="q2-plan">← Назад</button>
   </section>
 
   <section class="quest" id="q2-time">
@@ -156,6 +160,7 @@
     <p class="cap">Хвилини</p>
     <div class="chips" id="mins"></div>
     <button class="next" id="finish2" disabled>Готово 💖</button>
+    <button class="back" data-back="q2-extra">← Назад</button>
   </section>
 
   <section class="quest" id="quest2-done">
@@ -164,6 +169,7 @@
     <div id="summary"></div>
     <p class="countdown">До побачення лишилось:<span id="cd"></span></p>
     <div class="player" id="player"></div>
+    <button class="back" data-back="q2-time">✏️ Змінити відповіді</button>
   </section>
 
 
@@ -184,7 +190,7 @@
 
       // ---------- збереження прогресу ----------
       if (location.search.indexOf('reset') !== -1) { try { localStorage.removeItem(STORE_KEY); } catch (e) {} }
-      var state = { page: 'quest1', role: '', plan: '', extras: [], time: '', sent: false };
+      var state = { page: 'quest1', role: '', plan: '', extras: [], time: '', sent: false, wasSent: false };
       try {
         var saved = JSON.parse(localStorage.getItem(STORE_KEY));
         if (saved && typeof saved === 'object') { for (var k in state) { if (k in saved) state[k] = saved[k]; } }
@@ -194,6 +200,7 @@
       function show(id) {
         document.querySelectorAll('.quest').forEach(function (q) { q.classList.remove('active'); });
         $(id).classList.add('active');
+        if (id !== 'quest2-done') { $('player').innerHTML = ''; $('player').classList.remove('on'); }
         state.page = id; save();
         window.scrollTo(0, 0);
       }
@@ -305,6 +312,10 @@
         });
       });
 
+      document.querySelectorAll('[data-back]').forEach(function (btn) {
+        btn.addEventListener('click', function () { show(btn.dataset.back); });
+      });
+
       // заблокований чекбокс: при натисканні — спливаюче пояснення
       var tipTimer = null;
       $('locked-opt').addEventListener('click', function (e) {
@@ -381,13 +392,14 @@
       // Нічого не показуємо на її екрані; якщо не вийшло — тихо пробуємо ще
       function send(attempt) {
         attempt = attempt || 1;
+        var updated = state.wasSent;
         var text = summaryRows().map(function (r) { return r[0] + ': ' + r[1]; }).join('\n');
         fetch('https://ntfy.sh/', {
           method: 'POST',
-          body: JSON.stringify({ topic: NTFY_TOPIC, title: '💌 Вона відповіла!', message: text, tags: ['heart'] })
+          body: JSON.stringify({ topic: NTFY_TOPIC, title: updated ? '✏️ Вона змінила відповіді' : '💌 Вона відповіла!', message: text, tags: ['heart'] })
         }).then(function (r) {
           if (!r.ok) throw new Error(r.status);
-          state.sent = true; save();
+          state.sent = true; state.wasSent = true; save();
         }).catch(function () {
           if (attempt < 5) setTimeout(function () { send(attempt + 1); }, 5000 * attempt);
         });
@@ -410,7 +422,7 @@
         if (fresh) hearts();
         if (!state.sent) send();
       }
-      finish.addEventListener('click', function () { showDone(true); });
+      finish.addEventListener('click', function () { state.sent = false; save(); showDone(true); });
 
       function hearts() {
         for (var i = 0; i < 40; i++) {
