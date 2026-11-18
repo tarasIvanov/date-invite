@@ -73,8 +73,12 @@
     .opts.col label { flex: 1 1 100%; }
     input[type=radio], input[type=checkbox] { accent-color: var(--accent); width: 20px; height: 20px; flex: none; }
     .date { font-size: 22px; margin: 4px 0 18px; }
-    .timebox { display: block; font-size: 18px; }
-    #time { display: block; margin: 12px auto 0; font: inherit; font-size: 32px; padding: 10px 16px; border: 2px solid var(--accent); border-radius: 16px; background: #fff; color: var(--ink); }
+    .clock { font-size: 56px; font-weight: bold; color: var(--accent-dark); font-variant-numeric: tabular-nums; margin: 6px 0 4px; letter-spacing: 2px; }
+    .clock.empty { opacity: .35; }
+    .cap { font-size: 15px; opacity: .75; margin: 14px 0 8px; text-align: left; }
+    .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .chips button { padding: 11px 0; font-size: 19px; background: rgba(255,255,255,.7); color: var(--ink); box-shadow: none; border: 2px solid transparent; border-radius: 14px; font-variant-numeric: tabular-nums; }
+    .chips button.sel { background: var(--accent); color: #fff; border-color: var(--accent-dark); transform: scale(1.04); }
     .next { margin-top: 28px; background: var(--accent); }
     .next:disabled { background: #c9aab5; cursor: not-allowed; box-shadow: none; }
 
@@ -141,15 +145,17 @@
     <div class="emoji">🕰️</div>
     <h2>Коли зустрічаємось?</h2>
     <p class="date" id="date-label"></p>
-    <label class="timebox">О котрій починаємо?
-      <input type="time" id="time" step="300">
-    </label>
+    <div class="clock empty" id="clock">--:--</div>
+    <p class="cap">Година початку</p>
+    <div class="chips" id="hours"></div>
+    <p class="cap">Хвилини</p>
+    <div class="chips" id="mins"></div>
     <button class="next" id="finish2" disabled>Готово 💖</button>
   </section>
 
   <section class="quest" id="quest2-done">
     <div class="emoji">💞</div>
-    <h1>Записав!</h1>
+    <h1>Домовились!</h1>
     <div id="summary"></div>
     <p class="countdown">До побачення лишилось:<span id="cd"></span></p>
   </section>
@@ -267,15 +273,13 @@
       });
 
       var extraBoxes = document.querySelectorAll('input[name=extra]:not(:disabled)');
-      var timeInput = $('time'), finish = $('finish2');
+      var finish = $('finish2');
 
       // відновлення вибору
       ['role', 'plan'].forEach(function (name) {
         document.querySelectorAll('input[name=' + name + ']').forEach(function (i) { i.checked = (i.value === state[name]); });
       });
       extraBoxes.forEach(function (c) { c.checked = state.extras.indexOf(c.value) !== -1; });
-      timeInput.value = state.time || '';
-      finish.disabled = !timeInput.value;
 
       document.querySelectorAll('.next[data-next]').forEach(function (btn) {
         var need = btn.dataset.need;
@@ -296,17 +300,38 @@
       // дата незмінна — сьогодні
       var dateText = new Date().toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
       $('date-label').textContent = 'Сьогодні, ' + dateText;
-      timeInput.addEventListener('input', function () {
-        state.time = timeInput.value; finish.disabled = !timeInput.value; save();
-      });
+      // власний вибір часу: година + хвилини
+      var tp = (state.time || '').split(':');
+      var hour = tp[0] || '', minute = tp[1] || '';
+      function buildChips(box, values, getSel, onPick) {
+        values.forEach(function (v) {
+          var b = document.createElement('button');
+          b.type = 'button'; b.textContent = v;
+          b.addEventListener('click', function () { onPick(v); });
+          box.appendChild(b);
+        });
+      }
+      function refreshTime() {
+        [].forEach.call($('hours').children, function (b) { b.classList.toggle('sel', b.textContent === hour); });
+        [].forEach.call($('mins').children, function (b) { b.classList.toggle('sel', b.textContent === minute); });
+        $('clock').textContent = (hour || '--') + ':' + (minute || '--');
+        $('clock').classList.toggle('empty', !(hour && minute));
+        state.time = (hour && minute) ? hour + ':' + minute : '';
+        finish.disabled = !state.time;
+        save();
+      }
+      var hrs = []; for (var h = 8; h <= 23; h++) hrs.push((h < 10 ? '0' : '') + h);
+      buildChips($('hours'), hrs, null, function (v) { hour = v; refreshTime(); });
+      buildChips($('mins'), ['00', '15', '30', '45'], null, function (v) { minute = v; refreshTime(); });
+      refreshTime();
 
       // ---------- підсумок ----------
       function summaryRows() {
         return [
-          ['Сьогодні', state.role],
-          ['Робимо', state.plan],
+          ['Сьогодні ти', state.role],
+          ['Буде', state.plan],
           ['Додатково', state.extras.concat(['Пальчик в анальчик']).join(', ')],
-          ['Коли', 'сьогодні, ' + dateText + ', о ' + state.time]
+          ['Коли', dateText + ', о ' + state.time]
         ];
       }
       function renderSummary() {
