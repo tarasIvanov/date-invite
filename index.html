@@ -23,10 +23,12 @@
       display: flex;
     }
     .quest { display: none; text-align: center; padding: 24px; width: 100%; max-width: 520px; margin: auto; }
-    .quest.active { display: block; }
+    .quest.active { display: block; animation: slidein .45s ease backwards; }
+    @keyframes slidein { from { opacity: 0; transform: translateY(18px); } }
     .emoji { font-size: 72px; animation: bob 2.4s ease-in-out infinite; }
     @keyframes bob { 50% { transform: translateY(-8px); } }
     h1 { font-size: clamp(26px, 6vw, 38px); margin: 12px 0 28px; line-height: 1.25; }
+    h2 { font-size: 20px; margin: 18px 0 14px; text-align: left; }
     .hint {
       min-height: 28px;
       margin: 0 0 12px;
@@ -48,13 +50,18 @@
       cursor: pointer;
       color: #fff;
       box-shadow: 0 6px 16px rgba(0,0,0,.15);
-      transition: transform .15s, background .15s;
+      transition: transform .15s, background .15s, font-size .2s;
     }
     #yes { background: var(--accent); }
     #yes:hover { background: var(--accent-dark); transform: scale(1.05); }
-    #no { background: #8a7580; }
+    #no { background: #8a7580; white-space: nowrap; }
     #no.runaway { position: fixed; transition: left .25s ease-out, top .25s ease-out; z-index: 10; }
-    h2 { font-size: 20px; margin: 26px 0 10px; text-align: left; }
+    .egg { min-height: 30px; margin: 14px 0 0; font-size: 20px; color: var(--accent-dark); font-style: italic; opacity: 0; transition: opacity .5s; }
+    .egg.show { opacity: 1; }
+
+    .dots { margin: 0 0 6px; font-size: 14px; opacity: .75; }
+    .dots i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #fff; margin: 0 3px; border: 1px solid var(--accent); }
+    .dots i.on { background: var(--accent); }
     .opts { display: flex; gap: 10px; flex-wrap: wrap; }
     .opts label {
       flex: 1 1 200px; display: flex; align-items: center; gap: 10px; text-align: left;
@@ -65,16 +72,25 @@
     .opts label.locked { cursor: not-allowed; opacity: .9; }
     .opts.col label { flex: 1 1 100%; }
     input[type=radio], input[type=checkbox] { accent-color: var(--accent); width: 20px; height: 20px; flex: none; }
+    .date { font-size: 22px; margin: 4px 0 18px; }
+    .timebox { display: block; font-size: 18px; }
+    #time { display: block; margin: 12px auto 0; font: inherit; font-size: 32px; padding: 10px 16px; border: 2px solid var(--accent); border-radius: 16px; background: #fff; color: var(--ink); }
     .next { margin-top: 28px; background: var(--accent); }
     .next:disabled { background: #c9aab5; cursor: not-allowed; box-shadow: none; }
+
     #summary { text-align: left; font-size: 18px; line-height: 1.6; background: rgba(255,255,255,.65); border-radius: 16px; padding: 12px 18px; }
-    .done p { font-size: 20px; }
+    .countdown { margin: 22px 0 6px; font-size: 18px; }
+    #cd { display: block; font-size: 34px; color: var(--accent-dark); font-variant-numeric: tabular-nums; margin-top: 4px; }
+    .status { font-size: 15px; opacity: .8; min-height: 22px; margin: 12px 0 0; }
+    .status button { font-size: 15px; padding: 6px 16px; margin-left: 8px; background: var(--accent); }
+    #music { position: fixed; top: 14px; right: 14px; z-index: 20; padding: 8px 12px; font-size: 20px; background: rgba(255,255,255,.8); color: var(--ink); display: none; }
+    #music.on { display: block; }
     .heart { position: fixed; top: -40px; font-size: 28px; pointer-events: none; animation: fall linear forwards; }
     @keyframes fall { to { transform: translateY(110vh) rotate(360deg); } }
   </style>
 </head>
 <body>
-  <!-- Квест 1. Наступні квести — додавати як нові section.quest -->
+  <!-- Квест 1 -->
   <section class="quest active" id="quest1">
     <div class="emoji">💌</div>
     <h1>Підеш зі мною на побачення?</h1>
@@ -83,6 +99,7 @@
       <button id="yes">Так 💖</button>
       <button id="no">Ні</button>
     </div>
+    <p class="egg" id="egg" aria-live="polite"></p>
   </section>
 
   <!-- Квест 2: окремі сторінки по блоках питань -->
@@ -114,45 +131,107 @@
       <label><input type="checkbox" name="extra" value="Купити щось солодке"> 🍫 Купити щось солодке</label>
       <label><input type="checkbox" name="extra" value="Не спізнитись"> ⏰ Не спізнитись</label>
       <label><input type="checkbox" name="extra" value="Під час зустрічі сильно зацілувати"> 😘 Під час зустрічі сильно зацілувати</label>
+      <label><input type="checkbox" name="extra" value="Секс (лише за умови відсутності кровопролиття)"> 🔥 Секс (лише за умови відсутності кровопролиття)</label>
       <label class="locked"><input type="checkbox" name="extra" value="Пальчик в анальчик" checked disabled> 👉 Пальчик в анальчик</label>
     </div>
-    <button class="next" id="finish2">Готово 💖</button>
+    <button class="next" data-next="q2-time">Далі</button>
   </section>
 
-  <section class="quest done" id="quest2-done">
+  <section class="quest" id="q2-time">
+    <div class="emoji">🕰️</div>
+    <h2>Коли зустрічаємось?</h2>
+    <p class="date" id="date-label"></p>
+    <label class="timebox">О котрій починаємо?
+      <input type="time" id="time" step="300">
+    </label>
+    <button class="next" id="finish2" disabled>Готово 💖</button>
+  </section>
+
+  <section class="quest" id="quest2-done">
     <div class="emoji">💞</div>
     <h1>Записав!</h1>
     <div id="summary"></div>
-    <p>Скоро буде ще щось цікаве...</p>
+    <p class="countdown">До побачення лишилось:<span id="cd"></span></p>
+    <p class="status" id="send-status" aria-live="polite"></p>
   </section>
+
+  <button id="music" type="button" aria-label="Музика">🔇</button>
 
   <script>
     (function () {
-      var yes = document.getElementById('yes');
-      var no = document.getElementById('no');
-      var hint = document.getElementById('hint');
-      var yesClicks = 0;
-      var noTried = false;
-      var RADIUS = 160;      // "недалеко" від поточного місця
-      var MIN_JUMP = 90;     // щоб не стрибала на місці
+      // ---------- налаштування ----------
+      // Куди приходять відповіді: ntfy.sh (безкоштовно, без акаунту).
+      // Підписатись: застосунок ntfy або https://ntfy.sh/<TOPIC>
+      var NTFY_TOPIC = 'di-7B2SFf9kBePLpRzIOmA';
+      var STORE_KEY = 'date-invite-v1';
+      var STEPS = ['q2-role', 'q2-plan', 'q2-extra', 'q2-time'];
 
+      function $(id) { return document.getElementById(id); }
       function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
+      // ---------- збереження прогресу ----------
+      if (location.search.indexOf('reset') !== -1) { try { localStorage.removeItem(STORE_KEY); } catch (e) {} }
+      var state = { page: 'quest1', role: '', plan: '', extras: [], time: '', sent: false };
+      try {
+        var saved = JSON.parse(localStorage.getItem(STORE_KEY));
+        if (saved && typeof saved === 'object') { for (var k in state) { if (k in saved) state[k] = saved[k]; } }
+      } catch (e) {}
+      function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+
+      function show(id) {
+        document.querySelectorAll('.quest').forEach(function (q) { q.classList.remove('active'); });
+        $(id).classList.add('active');
+        state.page = id; save();
+        window.scrollTo(0, 0);
+      }
+
+      // ---------- квест 1: «Ні» тікає ----------
+      var yes = $('yes'), no = $('no'), hint = $('hint'), egg = $('egg');
+      var yesClicks = 0, noCount = 0, lastDodge = 0, eggShown = false;
+      var RADIUS = 160, MIN_JUMP = 90;
+      var PHRASES = [[0, 'Ні'], [2, 'Точно ні?'], [4, 'Ну будь ласочка'], [6, 'Не тисни!'], [9, 'Я ж ображусь 🥺'], [12, 'Остання спроба...']];
+      var EGG_AT = 15;
+
+      function noLabel() {
+        var t = 'Ні';
+        PHRASES.forEach(function (p) { if (noCount >= p[0]) t = p[1]; });
+        return t;
+      }
+
       function dodge() {
-        noTried = true;
-        hint.classList.remove('show');   // після спроби натиснути «Ні» підказка зникає
-        var w = no.offsetWidth, h = no.offsetHeight;
+        var now = Date.now();
+        if (now - lastDodge < 250) return;   // один дотик = одна спроба
+        lastDodge = now;
+        noCount++;
+        hint.classList.remove('show');       // після спроби натиснути «Ні» підказка зникає
+
+        if (noCount >= EGG_AT) {             // пасхалка
+          eggShown = true;
+          no.style.display = 'none';
+          egg.textContent = 'Ок, я вже купив квіти, відмова не приймається 💐';
+          egg.classList.add('show');
+          return;
+        }
+
+        // «Ні» зменшується і тікає швидше, «Так» росте
+        no.textContent = noLabel();
+        no.style.fontSize = Math.max(12, 20 - noCount * 0.5) + 'px';
+        no.style.padding = '10px ' + Math.max(16, 34 - noCount * 1.2) + 'px';
+        yes.style.fontSize = Math.min(32, 20 + noCount * 0.9) + 'px';
+
         var r = no.getBoundingClientRect();
-        // перший раз — стаємо fixed на тому ж місці, без стрибка
         if (!no.classList.contains('runaway')) {
           no.classList.add('runaway');
           no.style.left = r.left + 'px';
           no.style.top = r.top + 'px';
         }
+        no.style.transitionDuration = Math.max(0.08, 0.25 - noCount * 0.012) + 's';
+        var w = no.offsetWidth, h = no.offsetHeight;
+        var radius = RADIUS + noCount * 6;
         var cx = r.left, cy = r.top, nx, ny, tries = 0;
         do {
           var a = Math.random() * Math.PI * 2;
-          var d = MIN_JUMP + Math.random() * (RADIUS - MIN_JUMP);
+          var d = MIN_JUMP + Math.random() * (radius - MIN_JUMP);
           nx = clamp(cx + Math.cos(a) * d, 8, window.innerWidth - w - 8);
           ny = clamp(cy + Math.sin(a) * d, 8, window.innerHeight - h - 8);
           tries++;
@@ -161,7 +240,6 @@
         no.style.top = ny + 'px';
       }
 
-      // тікає при наведенні/дотику, клік до неї не доходить
       ['mouseenter', 'pointerdown', 'touchstart', 'focus'].forEach(function (ev) {
         no.addEventListener(ev, function (e) { e.preventDefault(); dodge(); }, { passive: false });
       });
@@ -169,46 +247,148 @@
 
       yes.addEventListener('click', function () {
         yesClicks++;
-        // перше «Так» — питання над кнопкою; далі проходимо лише якщо вона хоч раз тицьнула «Ні»
-        if (yesClicks === 1 || !noTried) {
+        // перше «Так» — питання над кнопкою; далі проходимо лише після спроби натиснути «Ні»
+        if (!eggShown && (yesClicks === 1 || noCount === 0)) {
           hint.classList.add('show');
           return;
         }
         show('q2-role');
       });
 
-      function show(id) {
-        document.querySelectorAll('.quest').forEach(function (q) { q.classList.remove('active'); });
-        document.getElementById(id).classList.add('active');
-        window.scrollTo(0, 0);
-      }
-
-      // Квест 2: кожен блок — окрема сторінка
-      function val(name) {
-        var c = document.querySelector('input[name=' + name + ']:checked');
-        return c ? c.value : '';
-      }
-      document.querySelectorAll('.next[data-need]').forEach(function (btn) {
-        var name = btn.dataset.need;
-        document.querySelectorAll('input[name=' + name + ']').forEach(function (i) {
-          i.addEventListener('change', function () { btn.disabled = false; });
-        });
-        btn.addEventListener('click', function () { show(btn.dataset.next); });
+      // ---------- квест 2 ----------
+      // крапки прогресу
+      STEPS.forEach(function (id, i) {
+        var d = document.createElement('div');
+        d.className = 'dots';
+        d.setAttribute('aria-label', 'Крок ' + (i + 1) + ' з ' + STEPS.length);
+        var dots = '';
+        for (var j = 0; j < STEPS.length; j++) dots += '<i' + (j <= i ? ' class="on"' : '') + '></i>';
+        d.innerHTML = dots + '<br>питання ' + (i + 1) + ' з ' + STEPS.length;
+        $(id).insertBefore(d, $(id).firstChild);
       });
-      document.getElementById('finish2').addEventListener('click', function () {
-        var extras = ['Пальчик в анальчик'];
-        document.querySelectorAll('input[name=extra]:checked:not(:disabled)').forEach(function (c) { extras.unshift(c.value); });
-        var s = document.getElementById('summary');
+
+      var extraBoxes = document.querySelectorAll('input[name=extra]:not(:disabled)');
+      var timeInput = $('time'), finish = $('finish2');
+
+      // відновлення вибору
+      ['role', 'plan'].forEach(function (name) {
+        document.querySelectorAll('input[name=' + name + ']').forEach(function (i) { i.checked = (i.value === state[name]); });
+      });
+      extraBoxes.forEach(function (c) { c.checked = state.extras.indexOf(c.value) !== -1; });
+      timeInput.value = state.time || '';
+      finish.disabled = !timeInput.value;
+
+      document.querySelectorAll('.next[data-next]').forEach(function (btn) {
+        var need = btn.dataset.need;
+        if (need) btn.disabled = !state[need];
+        btn.addEventListener('click', function () { show(btn.dataset.next); });
+        if (!need) return;
+        document.querySelectorAll('input[name=' + need + ']').forEach(function (i) {
+          i.addEventListener('change', function () { state[need] = i.value; btn.disabled = false; save(); });
+        });
+      });
+      extraBoxes.forEach(function (c) {
+        c.addEventListener('change', function () {
+          state.extras = [].filter.call(extraBoxes, function (x) { return x.checked; }).map(function (x) { return x.value; });
+          save();
+        });
+      });
+
+      // дата незмінна — сьогодні
+      var dateText = new Date().toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
+      $('date-label').textContent = 'Сьогодні, ' + dateText;
+      timeInput.addEventListener('input', function () {
+        state.time = timeInput.value; finish.disabled = !timeInput.value; save();
+      });
+
+      // ---------- підсумок ----------
+      function summaryRows() {
+        return [
+          ['Сьогодні', state.role],
+          ['Робимо', state.plan],
+          ['Додатково', state.extras.concat(['Пальчик в анальчик']).join(', ')],
+          ['Коли', 'сьогодні, ' + dateText + ', о ' + state.time]
+        ];
+      }
+      function renderSummary() {
+        var s = $('summary');
         s.innerHTML = '';
-        [['Сьогодні', val('role')], ['Робимо', val('plan')], ['Додатково', extras.join(', ')]].forEach(function (r) {
+        summaryRows().forEach(function (r) {
           var p = document.createElement('div');
           var b = document.createElement('b'); b.textContent = r[0] + ': ';
           p.appendChild(b); p.appendChild(document.createTextNode(r[1]));
           s.appendChild(p);
         });
+      }
+
+      // ---------- відліг ----------
+      var cdTimer = null;
+      function startCountdown() {
+        var parts = (state.time || '00:00').split(':');
+        var target = new Date(); target.setHours(+parts[0], +parts[1], 0, 0);
+        function tick() {
+          var diff = Math.floor((target - new Date()) / 1000);
+          if (diff <= 0) { $('cd').textContent = 'Час настав! 💖'; clearInterval(cdTimer); return; }
+          var h = Math.floor(diff / 3600), m = Math.floor(diff % 3600 / 60), s = diff % 60;
+          $('cd').textContent = h + ' год ' + (m < 10 ? '0' : '') + m + ' хв ' + (s < 10 ? '0' : '') + s + ' с';
+        }
+        clearInterval(cdTimer); tick(); cdTimer = setInterval(tick, 1000);
+      }
+
+      // ---------- відправка відповіді (ntfy.sh) ----------
+      function setStatus(html) { $('send-status').innerHTML = html; }
+      function send() {
+        setStatus('Надсилаю відповідь...');
+        var text = summaryRows().map(function (r) { return r[0] + ': ' + r[1]; }).join('\n');
+        fetch('https://ntfy.sh/', {
+          method: 'POST',
+          body: JSON.stringify({ topic: NTFY_TOPIC, title: '💌 Вона відповіла!', message: text, tags: ['heart'] })
+        }).then(function (r) {
+          if (!r.ok) throw new Error(r.status);
+          state.sent = true; save();
+          setStatus('Відповідь надіслано ✅');
+        }).catch(function () {
+          setStatus('Не вдалося надіслати <button type="button" id="retry">Ще раз</button>');
+          $('retry').addEventListener('click', send);
+        });
+      }
+
+      // ---------- музика (синтезована, без файлів) ----------
+      var ctx = null, musicTimer = null, musicOn = false, step = 0;
+      var MELODY = [261.63, 329.63, 392.0, 329.63, 220.0, 261.63, 329.63, 261.63,
+                    174.61, 220.0, 261.63, 220.0, 196.0, 246.94, 293.66, 246.94];
+      function note(freq, t) {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle'; o.frequency.value = freq * 2;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.12, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.9);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t); o.stop(t + 1);
+      }
+      function musicOnFn() {
+        try {
+          ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+          if (ctx.resume) ctx.resume();
+          musicOn = true;
+          musicTimer = setInterval(function () { note(MELODY[step++ % MELODY.length], ctx.currentTime + 0.05); }, 420);
+          $('music').textContent = '🔊';
+        } catch (e) {}
+      }
+      function musicOffFn() {
+        musicOn = false; clearInterval(musicTimer); $('music').textContent = '🔇';
+      }
+      $('music').addEventListener('click', function () { musicOn ? musicOffFn() : musicOnFn(); });
+
+      // ---------- фінал ----------
+      function showDone(fresh) {
+        renderSummary(); startCountdown();
         show('quest2-done');
-        hearts();
-      });
+        $('music').classList.add('on');
+        if (fresh) { hearts(); musicOnFn(); }
+        if (!state.sent) send(); else setStatus('Відповідь надіслано ✅');
+      }
+      finish.addEventListener('click', function () { showDone(true); });
 
       function hearts() {
         for (var i = 0; i < 40; i++) {
@@ -221,6 +401,15 @@
           document.body.appendChild(s);
           setTimeout(function (el) { el.remove(); }.bind(null, s), 8000);
         }
+      }
+
+      // ---------- відновлення сторінки після перезавантаження ----------
+      if (state.page === 'quest2-done' && state.role && state.plan && state.time) {
+        showDone(false);
+      } else if (STEPS.indexOf(state.page) !== -1) {
+        show(state.page);
+      } else {
+        state.page = 'quest1';
       }
     })();
   </script>
