@@ -84,8 +84,9 @@
     .chips button { padding: 11px 0; font-size: 19px; background: rgba(255,255,255,.7); color: var(--ink); box-shadow: none; border: 2px solid transparent; border-radius: 14px; font-variant-numeric: tabular-nums; }
     .chips button.sel { background: var(--accent); color: #fff; border-color: var(--accent-dark); transform: scale(1.04); }
     .next { margin-top: 28px; background: var(--accent); }
-    .back { display: block; margin: 14px auto 0; background: none; box-shadow: none; color: var(--ink); opacity: .75; font-size: 17px; padding: 8px 18px; text-decoration: underline; }
-    .back:hover { opacity: 1; }
+    .back[hidden] { display: none; }
+    .back { position: fixed; top: 12px; left: 12px; z-index: 30; margin: 0; padding: 8px 16px; font-size: 16px; color: var(--ink); background: rgba(255,255,255,.85); box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    .back:hover { background: #fff; }
     .next:disabled { background: #c9aab5; cursor: not-allowed; box-shadow: none; }
 
     #summary { text-align: left; font-size: 18px; line-height: 1.6; background: rgba(255,255,255,.65); border-radius: 16px; padding: 12px 18px; }
@@ -133,7 +134,6 @@
       <label><input type="radio" name="plan" value="Прогулянка та вечеря"> 🌆 Прогулянка та вечеря</label>
     </div>
     <button class="next" data-next="q2-extra" data-need="plan" disabled>Далі</button>
-    <button class="back" data-back="q2-role">← Назад</button>
   </section>
 
   <section class="quest" id="q2-extra">
@@ -147,7 +147,6 @@
       <label class="locked" id="locked-opt"><input type="checkbox" name="extra" value="Пальчик в анальчик" checked disabled> 👉 Пальчик в анальчик<span class="tip" id="tip" role="status">Ця опція недоступна до редагування 🔒</span></label>
     </div>
     <button class="next" data-next="q2-time">Далі</button>
-    <button class="back" data-back="q2-plan">← Назад</button>
   </section>
 
   <section class="quest" id="q2-time">
@@ -160,7 +159,6 @@
     <p class="cap">Хвилини</p>
     <div class="chips" id="mins"></div>
     <button class="next" id="finish2" disabled>Готово 💖</button>
-    <button class="back" data-back="q2-extra">← Назад</button>
   </section>
 
   <section class="quest" id="quest2-done">
@@ -169,9 +167,10 @@
     <div id="summary"></div>
     <p class="countdown">До побачення лишилось:<span id="cd"></span></p>
     <div class="player" id="player"></div>
-    <button class="back" data-back="q2-time">✏️ Змінити відповіді</button>
   </section>
 
+
+  <button id="back" class="back" type="button" hidden>← Назад</button>
 
   <script>
     (function () {
@@ -182,6 +181,7 @@
       // Пісня «лтл» (YouTube, вбудований плеєр) і секунда, з якої стартує приспів
       var SONG_ID = 'czucm2XMtRI';
       var SONG_START = 45;
+      var BACK = { 'q2-plan': 'q2-role', 'q2-extra': 'q2-plan', 'q2-time': 'q2-extra', 'quest2-done': 'q2-time' };
       var STORE_KEY = 'date-invite-v1';
       var STEPS = ['q2-role', 'q2-plan', 'q2-extra', 'q2-time'];
 
@@ -202,6 +202,8 @@
         $(id).classList.add('active');
         if (id !== 'quest2-done') { $('player').innerHTML = ''; $('player').classList.remove('on'); }
         state.page = id; save();
+        $('back').hidden = !BACK[id];
+        $('back').textContent = id === 'quest2-done' ? '← Змінити відповіді' : '← Назад';
         window.scrollTo(0, 0);
       }
 
@@ -312,9 +314,7 @@
         });
       });
 
-      document.querySelectorAll('[data-back]').forEach(function (btn) {
-        btn.addEventListener('click', function () { show(btn.dataset.back); });
-      });
+      $('back').addEventListener('click', function () { if (BACK[state.page]) show(BACK[state.page]); });
 
       // заблокований чекбокс: при натисканні — спливаюче пояснення
       var tipTimer = null;
