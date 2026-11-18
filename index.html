@@ -283,8 +283,9 @@
 
       yes.addEventListener('click', function () {
         yesClicks++;
-        // перше «Так» — питання над кнопкою; далі проходимо лише після спроби натиснути «Ні»
-        if (!eggShown && (yesClicks === 1 || noCount === 0)) {
+        // «Так» без жодної спроби «Ні» — лише показуємо питання над кнопкою;
+        // якщо «Ні» вже пробували (до чи після) — проходимо далі одразу
+        if (!eggShown && noCount === 0) {
           hint.classList.add('show');
           return;
         }
