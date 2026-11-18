@@ -65,8 +65,8 @@
     .opts label.locked { cursor: not-allowed; opacity: .9; }
     .opts.col label { flex: 1 1 100%; }
     input[type=radio], input[type=checkbox] { accent-color: var(--accent); width: 20px; height: 20px; flex: none; }
-    #submit2 { margin-top: 28px; background: var(--accent); }
-    #submit2:disabled { background: #c9aab5; cursor: not-allowed; box-shadow: none; }
+    .next { margin-top: 28px; background: var(--accent); }
+    .next:disabled { background: #c9aab5; cursor: not-allowed; box-shadow: none; }
     #summary { text-align: left; font-size: 18px; line-height: 1.6; background: rgba(255,255,255,.65); border-radius: 16px; padding: 12px 18px; }
     .done p { font-size: 20px; }
     .heart { position: fixed; top: -40px; font-size: 28px; pointer-events: none; animation: fall linear forwards; }
@@ -85,33 +85,38 @@
     </div>
   </section>
 
-  <!-- Квест 2 -->
-  <section class="quest" id="quest2">
+  <!-- Квест 2: окремі сторінки по блоках питань -->
+  <section class="quest" id="q2-role">
     <div class="emoji">🥰</div>
     <h1>Ура! Тепер кілька питань</h1>
-    <form id="form2">
-      <h2>1. Ти сьогодні пасенджер-прінцес чи драйвер?</h2>
-      <div class="opts">
-        <label><input type="radio" name="role" value="Пасенджер-прінцес 👑"> Пасенджер-прінцес 👑</label>
-        <label><input type="radio" name="role" value="Драйвер 🚗"> Драйвер 🚗</label>
-      </div>
+    <h2>Ти сьогодні пасенджер-прінцес чи драйвер?</h2>
+    <div class="opts">
+      <label><input type="radio" name="role" value="Пасенджер-прінцес 👑"> Пасенджер-прінцес 👑</label>
+      <label><input type="radio" name="role" value="Драйвер 🚗"> Драйвер 🚗</label>
+    </div>
+    <button class="next" data-next="q2-plan" data-need="role" disabled>Далі</button>
+  </section>
 
-      <h2>2. Що робитимемо?</h2>
-      <div class="opts col">
-        <label><input type="radio" name="plan" value="Попкорн + фільм"> 🍿 Попкорн + фільм</label>
-        <label><input type="radio" name="plan" value="Прогулянка та вечеря"> 🌆 Прогулянка та вечеря</label>
-      </div>
+  <section class="quest" id="q2-plan">
+    <div class="emoji">🎬</div>
+    <h2>Що робитимемо?</h2>
+    <div class="opts col">
+      <label><input type="radio" name="plan" value="Попкорн + фільм"> 🍿 Попкорн + фільм</label>
+      <label><input type="radio" name="plan" value="Прогулянка та вечеря"> 🌆 Прогулянка та вечеря</label>
+    </div>
+    <button class="next" data-next="q2-extra" data-need="plan" disabled>Далі</button>
+  </section>
 
-      <h2>3. Додатково</h2>
-      <div class="opts col">
-        <label><input type="checkbox" name="extra" value="Купити щось солодке"> 🍫 Купити щось солодке</label>
-        <label><input type="checkbox" name="extra" value="Не спізнитись"> ⏰ Не спізнитись</label>
-        <label><input type="checkbox" name="extra" value="Під час зустрічі сильно зацілувати"> 😘 Під час зустрічі сильно зацілувати</label>
-        <label class="locked"><input type="checkbox" name="extra" value="Пальчик в анальчик" checked disabled> 👉 Пальчик в анальчик</label>
-      </div>
-
-      <button type="submit" id="submit2" disabled>Готово 💖</button>
-    </form>
+  <section class="quest" id="q2-extra">
+    <div class="emoji">✨</div>
+    <h2>Додатково</h2>
+    <div class="opts col">
+      <label><input type="checkbox" name="extra" value="Купити щось солодке"> 🍫 Купити щось солодке</label>
+      <label><input type="checkbox" name="extra" value="Не спізнитись"> ⏰ Не спізнитись</label>
+      <label><input type="checkbox" name="extra" value="Під час зустрічі сильно зацілувати"> 😘 Під час зустрічі сильно зацілувати</label>
+      <label class="locked"><input type="checkbox" name="extra" value="Пальчик в анальчик" checked disabled> 👉 Пальчик в анальчик</label>
+    </div>
+    <button class="next" id="finish2">Готово 💖</button>
   </section>
 
   <section class="quest done" id="quest2-done">
@@ -169,7 +174,7 @@
           hint.classList.add('show');
           return;
         }
-        show('quest2');
+        show('q2-role');
       });
 
       function show(id) {
@@ -178,19 +183,24 @@
         window.scrollTo(0, 0);
       }
 
-      // Квест 2
-      var form = document.getElementById('form2');
-      var submit2 = document.getElementById('submit2');
-      form.addEventListener('change', function () {
-        submit2.disabled = !(form.elements.role.value && form.elements.plan.value);
+      // Квест 2: кожен блок — окрема сторінка
+      function val(name) {
+        var c = document.querySelector('input[name=' + name + ']:checked');
+        return c ? c.value : '';
+      }
+      document.querySelectorAll('.next[data-need]').forEach(function (btn) {
+        var name = btn.dataset.need;
+        document.querySelectorAll('input[name=' + name + ']').forEach(function (i) {
+          i.addEventListener('change', function () { btn.disabled = false; });
+        });
+        btn.addEventListener('click', function () { show(btn.dataset.next); });
       });
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
+      document.getElementById('finish2').addEventListener('click', function () {
         var extras = ['Пальчик в анальчик'];
-        form.querySelectorAll('input[name=extra]:checked:not(:disabled)').forEach(function (c) { extras.unshift(c.value); });
+        document.querySelectorAll('input[name=extra]:checked:not(:disabled)').forEach(function (c) { extras.unshift(c.value); });
         var s = document.getElementById('summary');
         s.innerHTML = '';
-        [['Сьогодні', form.elements.role.value], ['Робимо', form.elements.plan.value], ['Додатково', extras.join(', ')]].forEach(function (r) {
+        [['Сьогодні', val('role')], ['Робимо', val('plan')], ['Додатково', extras.join(', ')]].forEach(function (r) {
           var p = document.createElement('div');
           var b = document.createElement('b'); b.textContent = r[0] + ': ';
           p.appendChild(b); p.appendChild(document.createTextNode(r[1]));
