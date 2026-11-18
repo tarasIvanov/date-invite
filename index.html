@@ -69,7 +69,11 @@
       padding: 12px 14px; cursor: pointer; font-size: 18px; transition: border-color .15s, background .15s;
     }
     .opts label:has(input:checked) { border-color: var(--accent); background: #fff; }
-    .opts label.locked { cursor: not-allowed; opacity: .9; }
+    .opts label.locked { cursor: not-allowed; opacity: .9; position: relative; }
+    .opts label.locked input { pointer-events: none; }
+    .tip { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translate(-50%, 6px); white-space: nowrap; background: var(--ink); color: #fff; font-size: 15px; padding: 8px 14px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 5; }
+    .tip::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px; border: 6px solid transparent; border-top-color: var(--ink); }
+    .tip.show { opacity: 1; transform: translate(-50%, 0); }
     .opts.col label { flex: 1 1 100%; }
     input[type=radio], input[type=checkbox] { accent-color: var(--accent); width: 20px; height: 20px; flex: none; }
     .date { font-size: 22px; margin: 4px 0 18px; }
@@ -140,7 +144,7 @@
       <label><input type="checkbox" name="extra" value="Не спізнитись"> ⏰ Не спізнитись</label>
       <label><input type="checkbox" name="extra" value="Під час зустрічі сильно зацілувати"> 😘 Під час зустрічі сильно зацілувати</label>
       <label><input type="checkbox" name="extra" value="Секс (лише за умови відсутності кровопролиття)"> 🔥 Секс (лише за умови відсутності кровопролиття)</label>
-      <label class="locked"><input type="checkbox" name="extra" value="Пальчик в анальчик" checked disabled> 👉 Пальчик в анальчик</label>
+      <label class="locked" id="locked-opt"><input type="checkbox" name="extra" value="Пальчик в анальчик" checked disabled> 👉 Пальчик в анальчик<span class="tip" id="tip" role="status">Ця опція недоступна до редагування 🔒</span></label>
     </div>
     <button class="next" data-next="q2-time">Далі</button>
   </section>
@@ -306,6 +310,16 @@
         });
       });
 
+      // заблокований чекбокс: при натисканні — спливаюче пояснення
+      var tipTimer = null;
+      $('locked-opt').addEventListener('click', function (e) {
+        e.preventDefault();
+        var t = $('tip');
+        t.classList.add('show');
+        clearTimeout(tipTimer);
+        tipTimer = setTimeout(function () { t.classList.remove('show'); }, 2200);
+      });
+
       // дата незмінна — сьогодні
       var dateText = new Date().toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
       $('date-label').textContent = 'Сьогодні, ' + dateText;
@@ -329,7 +343,7 @@
         finish.disabled = !state.time;
         save();
       }
-      var hrs = []; for (var h = 8; h <= 23; h++) hrs.push((h < 10 ? '0' : '') + h);
+      var hrs = []; for (var h = 16; h <= 22; h++) hrs.push((h < 10 ? '0' : '') + h);
       buildChips($('hours'), hrs, null, function (v) { hour = v; refreshTime(); });
       buildChips($('mins'), ['00', '15', '30', '45'], null, function (v) { minute = v; refreshTime(); });
       refreshTime();
