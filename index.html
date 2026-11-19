@@ -177,16 +177,14 @@
     <div class="chips" id="hours"></div>
     <p class="cap">Хвилини</p>
     <div class="chips" id="mins"></div>
-    <button class="next" id="next-time" data-next="q2-pickup" disabled>Далі</button>
+    <button class="next" id="next-time" data-next="q2-notes" disabled>Далі</button>
   </section>
 
-  <section class="quest" id="q2-pickup">
-    <div class="emoji">🚗</div>
-    <h2>Звідки тебе забрати?</h2>
-    <input type="text" id="pickup" class="field" maxlength="200" placeholder="Адреса або орієнтир" autocomplete="street-address">
+  <section class="quest" id="q2-notes">
+    <div class="emoji">📝</div>
     <h2>Нотатки</h2>
     <textarea id="notes" class="field" rows="4" maxlength="500" placeholder="Що ще варто знати? (необов’язково)"></textarea>
-    <button class="next" id="finish2" disabled>Готово 💖</button>
+    <button class="next" id="finish2">Готово 💖</button>
   </section>
 
   <section class="quest" id="quest2-done">
@@ -206,8 +204,8 @@
       // Куди приходять відповіді: ntfy.sh (безкоштовно, без акаунту).
       // Підписатись: застосунок ntfy або https://ntfy.sh/<TOPIC>
       var NTFY_TOPIC = 'di-7B2SFf9kBePLpRzIOmA';
-      var BACK = { 'q2-plan': 'q2-role', 'q2-role': 'q2-ura', 'q2-sub': 'q2-plan', 'q2-extra': 'q2-sub', 'q2-time': 'q2-extra', 'q2-pickup': 'q2-time', 'quest2-done': 'q2-pickup', 'q2-nofinger': 'q2-extra' };
-      var STEPS = ['q2-role', 'q2-plan', 'q2-sub', 'q2-extra', 'q2-time', 'q2-pickup'];
+      var BACK = { 'q2-plan': 'q2-role', 'q2-role': 'q2-ura', 'q2-sub': 'q2-plan', 'q2-extra': 'q2-sub', 'q2-time': 'q2-extra', 'q2-notes': 'q2-time', 'quest2-done': 'q2-notes', 'q2-nofinger': 'q2-extra' };
+      var STEPS = ['q2-role', 'q2-plan', 'q2-sub', 'q2-extra', 'q2-time', 'q2-notes'];
       var SUB = {
         'Попкорн + фільм': { emoji: '🍿', title: 'Який фільм?', opts: [['Романтичне', '💕'], ['Комедія', '😂'], ['Пригодницьке', '🗺️']] },
         'Прогулянка та вечеря': { emoji: '🌆', title: 'Куди підемо?', opts: [['Оранжерія', '🌿'], ['Невдома', '📍'], ['Мила це я', '📍'], ['Левада', '🌳']] }
@@ -218,7 +216,7 @@
 
       // Стан живе лише в пам'яті сторінки: після перезавантаження все починається з нуля
       try { localStorage.removeItem('date-invite-v1'); } catch (e) {}   // прибрати старий кеш
-      var state = { page: 'quest1', role: '', plan: '', extras: [], time: '', sent: false, wasSent: false, sawNoFinger: false, rewarded: false, sub: '', subFor: '', pickup: '', notes: '' };
+      var state = { page: 'quest1', role: '', plan: '', extras: [], time: '', sent: false, wasSent: false, sawNoFinger: false, rewarded: false, sub: '', subFor: '', notes: '' };
 
       // питання-уточнення залежить від вибору «що робитимемо»
       function renderSub() {
@@ -333,11 +331,6 @@
 
       var extraBoxes = document.querySelectorAll('input[name=extra]:not(:disabled)');
       var finish = $('finish2');
-      $('pickup').value = state.pickup; $('notes').value = state.notes;
-      finish.disabled = !state.pickup.trim();
-      $('pickup').addEventListener('input', function () {
-        state.pickup = $('pickup').value; finish.disabled = !state.pickup.trim();
-      });
       $('notes').addEventListener('input', function () { state.notes = $('notes').value; });
 
       // відновлення вибору
@@ -410,8 +403,7 @@
           ['Сьогодні ти', state.role],
           ['Буде', state.plan + (state.sub ? ' (' + state.sub + ')' : '')],
           ['Додатково', state.extras.join(', ')],
-          ['Коли', dateText + ', о ' + state.time],
-          ['Забрати', state.pickup.trim()]
+          ['Коли', dateText + ', о ' + state.time]
         ];
         if (state.notes.trim()) rows.push(['Нотатки', state.notes.trim()]);
         return rows;
