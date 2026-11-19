@@ -207,7 +207,6 @@
       // Підписатись: застосунок ntfy або https://ntfy.sh/<TOPIC>
       var NTFY_TOPIC = 'di-7B2SFf9kBePLpRzIOmA';
       var BACK = { 'q2-plan': 'q2-role', 'q2-role': 'q2-ura', 'q2-sub': 'q2-plan', 'q2-extra': 'q2-sub', 'q2-time': 'q2-extra', 'q2-pickup': 'q2-time', 'quest2-done': 'q2-pickup', 'q2-nofinger': 'q2-extra' };
-      var STORE_KEY = 'date-invite-v1';
       var STEPS = ['q2-role', 'q2-plan', 'q2-sub', 'q2-extra', 'q2-time', 'q2-pickup'];
       var SUB = {
         'Попкорн + фільм': { emoji: '🍿', title: 'Який фільм?', opts: [['Романтичне', '💕'], ['Комедія', '😂'], ['Пригодницьке', '🗺️']] },
@@ -217,19 +216,14 @@
       function $(id) { return document.getElementById(id); }
       function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-      // ---------- збереження прогресу ----------
-      if (location.search.indexOf('reset') !== -1) { try { localStorage.removeItem(STORE_KEY); } catch (e) {} }
+      // Стан живе лише в пам'яті сторінки: після перезавантаження все починається з нуля
+      try { localStorage.removeItem('date-invite-v1'); } catch (e) {}   // прибрати старий кеш
       var state = { page: 'quest1', role: '', plan: '', extras: [], time: '', sent: false, wasSent: false, sawNoFinger: false, rewarded: false, sub: '', subFor: '', pickup: '', notes: '' };
-      try {
-        var saved = JSON.parse(localStorage.getItem(STORE_KEY));
-        if (saved && typeof saved === 'object') { for (var k in state) { if (k in saved) state[k] = saved[k]; } }
-      } catch (e) {}
-      function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
 
       // питання-уточнення залежить від вибору «що робитимемо»
       function renderSub() {
         var cfg = SUB[state.plan]; if (!cfg) return;
-        if (state.subFor !== state.plan) { state.sub = ''; state.subFor = state.plan; save(); }
+        if (state.subFor !== state.plan) { state.sub = ''; state.subFor = state.plan; }
         $('sub-emoji').textContent = cfg.emoji;
         $('sub-title').textContent = cfg.title;
         var box = $('sub-opts'); box.innerHTML = '';
@@ -237,7 +231,7 @@
           var l = document.createElement('label');
           var i = document.createElement('input');
           i.type = 'radio'; i.name = 'sub'; i.value = o[0]; i.checked = (state.sub === o[0]);
-          i.addEventListener('change', function () { state.sub = o[0]; $('next-sub').disabled = false; save(); });
+          i.addEventListener('change', function () { state.sub = o[0]; $('next-sub').disabled = false; });
           l.appendChild(i); l.appendChild(document.createTextNode(' ' + o[1] + ' ' + o[0]));
           box.appendChild(l);
         });
@@ -248,7 +242,7 @@
         if (id === 'q2-sub') renderSub();
         document.querySelectorAll('.quest').forEach(function (q) { q.classList.remove('active'); });
         $(id).classList.add('active');
-        state.page = id; save();
+        state.page = id;
         $('back').hidden = !BACK[id];
         $('back').textContent = id === 'quest2-done' ? '← Змінити відповіді' : '← Назад';
         window.scrollTo(0, 0);
@@ -342,9 +336,9 @@
       $('pickup').value = state.pickup; $('notes').value = state.notes;
       finish.disabled = !state.pickup.trim();
       $('pickup').addEventListener('input', function () {
-        state.pickup = $('pickup').value; finish.disabled = !state.pickup.trim(); save();
+        state.pickup = $('pickup').value; finish.disabled = !state.pickup.trim();
       });
-      $('notes').addEventListener('input', function () { state.notes = $('notes').value; save(); });
+      $('notes').addEventListener('input', function () { state.notes = $('notes').value; });
 
       // відновлення вибору
       ['role', 'plan'].forEach(function (name) {
@@ -358,24 +352,23 @@
         btn.addEventListener('click', function () { show(btn.dataset.next); });
         if (!need) return;
         document.querySelectorAll('input[name=' + need + ']').forEach(function (i) {
-          i.addEventListener('change', function () { state[need] = i.value; btn.disabled = false; save(); });
+          i.addEventListener('change', function () { state[need] = i.value; btn.disabled = false; });
         });
       });
       extraBoxes.forEach(function (c) {
         c.addEventListener('change', function () {
           state.extras = [].filter.call(extraBoxes, function (x) { return x.checked; }).map(function (x) { return x.value; });
-          save();
         });
       });
 
       $('next-extra').addEventListener('click', function () {
         // без «пальчика» далі не пускаємо
         if (state.extras.indexOf('Пальчик в анальчик') === -1) {
-          state.sawNoFinger = true; save();
+          state.sawNoFinger = true;
           show('q2-nofinger');
         } else if (state.sawNoFinger && !state.rewarded) {
           // спершу не вибрала, а потім вибрала — на 3 секунди показуємо фото
-          state.rewarded = true; save();
+          state.rewarded = true;
           show('q2-reward');
           setTimeout(function () { if (state.page === 'q2-reward') show('q2-time'); }, 3000);
         } else {
@@ -405,7 +398,6 @@
         $('clock').classList.toggle('empty', !(hour && minute));
         state.time = (hour && minute) ? hour + ':' + minute : '';
         $('next-time').disabled = !state.time;
-        save();
       }
       var hrs = []; for (var h = 16; h <= 22; h++) hrs.push((h < 10 ? '0' : '') + h);
       buildChips($('hours'), hrs, null, function (v) { hour = v; refreshTime(); });
@@ -460,7 +452,7 @@
           body: JSON.stringify({ topic: NTFY_TOPIC, title: updated ? '✏️ Вона змінила відповіді' : '💌 Вона відповіла!', message: text, tags: ['heart'] })
         }).then(function (r) {
           if (!r.ok) throw new Error(r.status);
-          state.sent = true; state.wasSent = true; save();
+          state.sent = true; state.wasSent = true;
         }).catch(function () {
           if (attempt < 5) setTimeout(function () { send(attempt + 1); }, 5000 * attempt);
         });
@@ -473,7 +465,7 @@
         if (fresh) hearts();
         if (!state.sent) send();
       }
-      finish.addEventListener('click', function () { state.sent = false; save(); showDone(true); });
+      finish.addEventListener('click', function () { state.sent = false; showDone(true); });
 
       function hearts() {
         for (var i = 0; i < 40; i++) {
@@ -488,18 +480,6 @@
         }
       }
 
-      // ---------- відновлення сторінки після перезавантаження ----------
-      if (state.page === 'quest2-done' && state.role && state.plan && state.time) {
-        showDone(false);
-      } else if (state.page === 'q2-reward') {
-        show('q2-time');
-      } else if (state.page === 'q2-nofinger') {
-        show('q2-extra');
-      } else if (STEPS.indexOf(state.page) !== -1 || state.page === 'q2-ura') {
-        show(state.page);
-      } else {
-        state.page = 'quest1';
-      }
     })();
   </script>
 </body>
